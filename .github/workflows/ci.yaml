@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Preparar configurações
+        run: |
+          echo '{"extends":["stylelint-config-standard"]}' > /tmp/stylelint.json
+          cat > /tmp/eslint.config.mjs <<'EOF'
+          import js from "@eslint/js";
+          import globals from "globals";
+          export default [
+            js.configs.recommended,
+            { languageOptions: { globals: globals.browser } }
+          ];
+          EOF
+
+      - name: Formatação
+        run: npx --yes prettier@3 --check .
+
+      - name: HTML
+        if: '!cancelled()'
+        run: npx --yes html-validate@9 --preset recommended "**/*.html"
+
+      - name: CSS
+        if: '!cancelled()'
+        run: npx --yes -p stylelint@16 -p stylelint-config-standard@37 stylelint "**/*.css" --config /tmp/stylelint.json
+
+      - name: JavaScript
+        if: '!cancelled()'
+        run: npx --yes -p eslint@9 -p @eslint/js@9 -p globals eslint . --config /tmp/eslint.config.mjs --no-config-lookup
