@@ -8,9 +8,18 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      TOOLS: ${{ github.workspace }}/../lint-tools
+
     steps:
       - uses: actions/checkout@v6
 
@@ -18,10 +27,20 @@ jobs:
         with:
           node-version: 22
 
+      - name: Instalar ferramentas
+        run: |
+          mkdir -p "$TOOLS"
+          npm install --prefix "$TOOLS" --no-audit --no-fund --loglevel=error \
+            prettier@3 \
+            html-validate@9 \
+            stylelint@16 stylelint-config-standard@37 \
+            eslint@9 @eslint/js@9 globals
+          echo "$TOOLS/node_modules/.bin" >> "$GITHUB_PATH"
+
       - name: Preparar configurações
         run: |
-          echo '{"extends":["stylelint-config-standard"]}' > /tmp/stylelint.json
-          cat > /tmp/eslint.config.mjs <<'EOF'
+          echo '{"extends":["stylelint-config-standard"]}' > "$TOOLS/stylelint.json"
+          cat > "$TOOLS/eslint.config.mjs" <<'EOF'
           import js from "@eslint/js";
           import globals from "globals";
           export default [
@@ -31,16 +50,16 @@ jobs:
           EOF
 
       - name: Formatação
-        run: npx --yes prettier@3 --check .
+        run: prettier --check .
 
       - name: HTML
         if: '!cancelled()'
-        run: npx --yes html-validate@9 --preset recommended "**/*.html"
+        run: html-validate --preset recommended "**/*.html"
 
       - name: CSS
         if: '!cancelled()'
-        run: npx --yes -p stylelint@16 -p stylelint-config-standard@37 stylelint "**/*.css" --config /tmp/stylelint.json
+        run: stylelint "**/*.css" --config "$TOOLS/stylelint.json" --allow-empty-input
 
       - name: JavaScript
         if: '!cancelled()'
-        run: npx --yes -p eslint@9 -p @eslint/js@9 -p globals eslint . --config /tmp/eslint.config.mjs --no-config-lookup
+        run: eslint . --config "$TOOLS/eslint.config.mjs" --no-config-lookup
