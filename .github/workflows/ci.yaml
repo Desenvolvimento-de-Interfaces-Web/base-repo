@@ -16,10 +16,8 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     env:
-      TOOLS: ${{ github.workspace }}/../lint-tools
-
+      TOOLS: ${{ runner.workspace }}
     steps:
       - uses: actions/checkout@v6
 
@@ -29,7 +27,6 @@ jobs:
 
       - name: Instalar ferramentas
         run: |
-          mkdir -p "$TOOLS"
           npm install --prefix "$TOOLS" --no-audit --no-fund --loglevel=error \
             prettier@3 \
             html-validate@9 \
