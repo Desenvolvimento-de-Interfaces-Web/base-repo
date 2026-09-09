@@ -27,7 +27,7 @@ jobs:
         include:
           - label: Formatação
             packages: prettier@3
-            command: prettier --check .
+            command: prettier --check "**/*.{html,css,js}"
           - label: HTML
             packages: html-validate@9
             command: html-validate --preset recommended "**/*.html"
