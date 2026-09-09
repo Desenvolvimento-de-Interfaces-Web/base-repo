@@ -64,7 +64,7 @@ jobs:
             "extends": ["html-validate:recommended"],
             "rules": {
               "doctype-style": ["error", { "style": "lowercase" }],
-              "void-style": ["error", { "style": "any" }]
+              "void-style": "off"
             }
           }
           EOF
