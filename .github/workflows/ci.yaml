@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 10
     env:
       TOOLS: ${{ github.workspace }}/..
-      OUTPUT: ${{ runner.temp }}/output.txt
+      OUTPUT: ${{ github.workspace }}/../output.txt
 
     strategy:
       fail-fast: false
