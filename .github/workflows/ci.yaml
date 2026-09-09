@@ -30,7 +30,7 @@ jobs:
             command: prettier --check "**/*.{html,css,js}"
           - label: HTML
             packages: html-validate@9
-            command: html-validate --preset recommended "**/*.html"
+            command: html-validate --config "$TOOLS/htmlvalidate.json" "**/*.html"
           - label: CSS
             packages: stylelint@16 stylelint-config-standard@37
             command: stylelint "**/*.css" --config "$TOOLS/stylelint.json" --allow-empty-input
@@ -53,6 +53,16 @@ jobs:
       - name: Preparar configurações
         run: |
           echo '{"extends":["stylelint-config-standard"]}' > "$TOOLS/stylelint.json"
+          # doctype-style em minúsculas: é assim que o Prettier formata o <!doctype html>.
+          cat > "$TOOLS/htmlvalidate.json" <<'EOF'
+          {
+            "root": true,
+            "extends": ["html-validate:recommended"],
+            "rules": {
+              "doctype-style": ["error", { "style": "lowercase" }]
+            }
+          }
+          EOF
           cat > "$TOOLS/eslint.config.mjs" <<'EOF'
           import js from "@eslint/js";
           import globals from "globals";
