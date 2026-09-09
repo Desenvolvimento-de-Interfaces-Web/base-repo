@@ -14,10 +14,30 @@ concurrency:
 
 jobs:
   lint:
+    name: ${{ matrix.label }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
       TOOLS: ${{ github.workspace }}/..
+      OUTPUT: ${{ runner.temp }}/output.txt
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Formatação
+            packages: prettier@3
+            command: prettier --check .
+          - label: HTML
+            packages: html-validate@9
+            command: html-validate --preset recommended "**/*.html"
+          - label: CSS
+            packages: stylelint@16 stylelint-config-standard@37
+            command: stylelint "**/*.css" --config "$TOOLS/stylelint.json" --allow-empty-input
+          - label: JavaScript
+            packages: eslint@9 @eslint/js@9 globals
+            command: eslint . --config "$TOOLS/eslint.config.mjs" --no-config-lookup
+
     steps:
       - uses: actions/checkout@v6
 
@@ -27,11 +47,7 @@ jobs:
 
       - name: Instalar ferramentas
         run: |
-          npm install --prefix "$TOOLS" --no-audit --no-fund --loglevel=error \
-            prettier@3 \
-            html-validate@9 \
-            stylelint@16 stylelint-config-standard@37 \
-            eslint@9 @eslint/js@9 globals
+          npm install --prefix "$TOOLS" --no-audit --no-fund --loglevel=error ${{ matrix.packages }}
           echo "$TOOLS/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Preparar configurações
@@ -46,17 +62,22 @@ jobs:
           ];
           EOF
 
-      - name: Formatação
-        run: prettier --check .
+      - name: ${{ matrix.label }}
+        id: analysis
+        shell: bash
+        run: ${{ matrix.command }} 2>&1 | tee "$OUTPUT"
 
-      - name: HTML
+      - name: Resumo
         if: '!cancelled()'
-        run: html-validate --preset recommended "**/*.html"
+        run: |
+          {
+            if [ "${{ steps.analysis.outcome }}" = "success" ]; then
+              echo "## Sem problemas em ${{ matrix.label }}"
+            else
+              echo "## Problemas encontrados em ${{ matrix.label }}"
+              echo '```'
+              cat "$OUTPUT"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: CSS
-        if: '!cancelled()'
-        run: stylelint "**/*.css" --config "$TOOLS/stylelint.json" --allow-empty-input
-
-      - name: JavaScript
-        if: '!cancelled()'
-        run: eslint . --config "$TOOLS/eslint.config.mjs" --no-config-lookup
